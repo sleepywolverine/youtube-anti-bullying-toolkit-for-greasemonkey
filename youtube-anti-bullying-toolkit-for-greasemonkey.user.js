@@ -10,7 +10,7 @@
 // @version     1
 // @grant       none
 
-// @edited      10/2/2016
+// @edited      10/3/2016
 
 // ==/UserScript==
 
@@ -36,6 +36,7 @@ configuration.displayUsers = false;
 configuration.displayChannels = false;
 configuration.displayPlayLists = false;
 configuration.displayComments = false;
+configuration.displayClickBaits = false;
 configuration.autoplay = false;
 configuration.localize = true;
 
@@ -74,8 +75,9 @@ var block = function(elements){
      }
      if(node){
       node.style.display = "none";
-      node.setAttribute("blocked", "true");
+      node.setAttribute("yt-anti-bullying-toolkit-block", "true");
       e.style.display = "none";
+      e.setAttribute("yt-anti-bullying-toolkit-block", "true");
      }
     }
   }
@@ -100,8 +102,9 @@ var blockByInnerHTML = function(expressions, nExpressions, elements){
        }
        if(node){
         node.style.display = "none";
-        node.setAttribute("blocked", "true");
-        e.style.display = "none";        
+        node.setAttribute("yt-anti-bullying-toolkit-block", "true");
+        e.style.display = "none";
+        e.setAttribute("yt-anti-bullying-toolkit-block", "true");
        }
     }
   }
@@ -119,6 +122,9 @@ queries.blockByChannelName = {};
 queries.blockByChannelName.query = "";
 queries.blockByPlayListName = {};
 queries.blockByPlayListName.query = "";
+queries.blockClickBaits = {};
+queries.blockClickBaits.query = "li a span[class='title']:not([yt-anti-bullying-toolkit-clickbait]), h3[class*='yt-lockup-title'] a:not([yt-anti-bullying-toolkit-clickbait])";
+queries.blockClickBaits.allCapsExpression = /^[\s\WA-Z0-9]*$/;
 
 (function(){
   let blockByUserName = "";
@@ -126,7 +132,7 @@ queries.blockByPlayListName.query = "";
    if(i > 0){
     blockByUserName += ', ';
    }
-   blockByUserName += "li a[href='/user/" + configuration.users[i] + "']";
+   blockByUserName += "li a[href='/user/" + configuration.users[i] + "']:not([yt-anti-bullying-toolkit-block])";
    queries.blockVideoWallByUserName.expressions.push(new RegExp(configuration.users[i], "i"))
   }
   queries.blockByUserName.query = blockByUserName;
@@ -140,8 +146,8 @@ queries.blockByPlayListName.query = "";
    if(i > 0){
     blockByChannelName += ', ';
    }
-   blockByChannelName += "li a[href='/channel/" + configuration.channels[i] + "']";
-   blockByChannelName += ", li span[data-ytid='" + configuration.channels[i] + "']";
+   blockByChannelName += "li a[href='/channel/" + configuration.channels[i] + "']:not([yt-anti-bullying-toolkit-block])";
+   blockByChannelName += ", li span[data-ytid='" + configuration.channels[i] + "']:not([yt-anti-bullying-toolkit-block])";
   }
   queries.blockByChannelName.query = blockByChannelName;
 })();
@@ -152,7 +158,7 @@ queries.blockByPlayListName.query = "";
    if(i > 0){
     blockByPlayListName += ', ';
    }
-   blockByPlayListName += "li a[href='/playlist?list=" + configuration.playLists[i] + "']";
+   blockByPlayListName += "li a[href='/playlist?list=" + configuration.playLists[i] + "']:not([yt-anti-bullying-toolkit-block])";
   }
   queries.blockByPlayListName.query = blockByPlayListName;
 })();
@@ -174,7 +180,38 @@ var blockComments = function(){
   var comments = document.getElementById("watch-discussion");
   if(comments){
     comments.style.display = 'none';
-    comments.setAttribute("blocked", "true");
+    comments.setAttribute("yt-anti-bullying-toolkit-block", "true");
+  }
+}
+
+var blockClickBaitWithAllCaps = function(e){
+  let exp = queries.blockClickBaits.allCapsExpression;
+  if(exp.test(e.innerHTML) === true){
+   if(e.style.display != "none"){
+    var node = e.parentNode;
+    while(node){
+     if(node.tagName.toLowerCase() === "li") break;
+     node = node.parentNode;
+    }
+    if(node){
+     node.style.display = "none";
+     node.setAttribute("yt-anti-bullying-toolkit-clickbait", "true");
+     e.style.display = "none";
+     e.setAttribute("yt-anti-bullying-toolkit-clickbait", "true");
+     return true;
+    }
+   }else{
+     return true;
+   }
+  }
+  return false;
+}
+
+var blockClickBaits = function(){
+  var elements = document.querySelectorAll(queries.blockClickBaits.query);
+  for(var i = 0, N = elements.length; i < N; ++i){
+   let e = elements[i];
+   if(blockClickBaitWithAllCaps(e)) continue;
   }
 }
 
@@ -182,19 +219,19 @@ var disableAutoplay = function(){
   var autoplay = document.getElementById("autoplay-checkbox");
   if(autoplay && autoplay.checked === true){
     autoplay.click();
-    autoplay.setAttribute("blocked", "true");
+    autoplay.setAttribute("yt-anti-bullying-toolkit-block", "true");
   }
 }
 
 var reinforceLocalization = function(){
-  let elements = document.querySelectorAll("a:not([localized])");
+  let elements = document.querySelectorAll("a:not([yt-anti-bullying-toolkit-localize])");
   for(var i = 0, N = elements.length; i < N; ++i){
    let e = elements[i];
    let href = e.href;
    href += (href.indexOf("?") === -1) ? "?" : "&";
    href += "hl=" + configuration.lang;
    e.href = href;
-   e.setAttribute("localized", "true");
+   e.setAttribute("yt-anti-bullying-toolkit-localize", "true");
   }
 }
 
@@ -203,6 +240,7 @@ var execute = function(){
   if(!configuration.displayChannels) blockByChannelName();
   if(!configuration.displayPlayLists) blockByPlayListName();
   if(!configuration.displayComments) blockComments();
+  if(!configuration.displayClickBaits) blockClickBaits();
   if(!configuration.autoplay) disableAutoplay();
   if(configuration.localize) reinforceLocalization();
 }
