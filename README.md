@@ -36,7 +36,7 @@ configuration.autoplay = false;
 configuration.localize = true;
 ```
 
-### about the "clickbait" feautre
+### about the "clickbait" feature
 marks any content with all caps title as clickbait
 
 ### about the "reinforce localzation" feature
