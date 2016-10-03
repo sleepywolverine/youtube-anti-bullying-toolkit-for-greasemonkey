@@ -1,5 +1,5 @@
 # youtube anti-bullying toolkit for greasemonkey
-_blocks users, channels, topics, playlists, comments, disable autoplay, reinforce localization_...
+_blocks users, channels, topics, playlists, comments, clickbaits, disable autoplay, reinforce localization_...
 
 ### installation
 - greasemonkey (firefox)
@@ -31,17 +31,21 @@ configuration.displayUsers = false;
 configuration.displayChannels = false;
 configuration.displayPlayLists = false;
 configuration.displayComments = false;
+configuration.displayClickBaits = false;
 configuration.autoplay = false;
 configuration.localize = true;
 ```
 
-### about "reinforce localzation" feature
+### about the "clickbait" feautre
+marks any content with all caps title as clickbait
+
+### about the "reinforce localzation" feature
 it reduces the occurence of unexpected foreign languages on the visited page
 
 this issue might be related to the youtube's localization system
 
 __temporary solution:__
-- it appends the "hl=your_prefered_language" magic querystring to every link
+- it appends the "hl=your_preferred_language" magic querystring to every link
 - if the visited page does not have the magic querystring then the user will be redirected to the same page with the magic querystring appended, e.g.: youtube.com becomes youtube.com?hl=en
 
 ```javascript
