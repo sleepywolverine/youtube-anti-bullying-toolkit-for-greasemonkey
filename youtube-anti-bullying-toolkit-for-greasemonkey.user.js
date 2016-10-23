@@ -10,9 +10,13 @@
 // @version     1
 // @grant       none
 
-// @edited      10/3/2016
-
 // ==/UserScript==
+
+let env = {};
+
+env.location = "";
+env.container = null;
+env.observer = null;
 
 let configuration = {};
 
@@ -31,7 +35,7 @@ configuration.playLists = [
   "playList0",
   "playList1",
   "playList2"
-]
+];
 configuration.displayUsers = false;
 configuration.displayChannels = false;
 configuration.displayPlayLists = false;
@@ -39,6 +43,39 @@ configuration.displayComments = false;
 configuration.displayClickBaits = false;
 configuration.autoplay = false;
 configuration.localize = true;
+configuration.removeNode = false;
+configuration.quarantineNode = true;
+configuration.container = "yt-anti-bullying-toolkit-quarantine-container";
+
+let hp = {};
+
+hp.parent = function(e, tagName){
+  let out = e.parentNode;
+  while(out){
+   if(out.tagName.toLowerCase() === tagName.toLowerCase()) break;
+   out = out.parentNode;
+  }
+  return out;
+}
+hp.isNotHidden = function(e){
+  return e.style.display !== "none"
+}
+hp.hide = function(e){
+  e.style.display = "none";
+}
+hp.block = function(e){
+  e.setAttribute("yt-anti-bullying-toolkit-block", "true");
+}
+hp.clickbait = function(e){
+  e.setAttribute("yt-anti-bullying-toolkit-clickbait", "true");
+}
+hp.remove = function(e){
+  e.parentNode.removeChild(e);
+}
+hp.quarantine = function(e){
+  e.parentNode.removeChild(e);
+  env.container.appendChild(e);
+}
 
 const nUsers = configuration.users.length;
 const nChannels = configuration.channels.length;
@@ -64,53 +101,57 @@ const nPlayLists = configuration.playLists.length;
   }
 })();
 
-var block = function(elements){
+let block = function(elements){
   for(var i = 0, N = elements.length; i < N; ++i){
-    var e = elements[i];
-    if(e.style.display != "none"){
-     var node = e.parentNode;
-     while(node){
-      if(node.tagName.toLowerCase() === "li") break;
-      node = node.parentNode;
-     }
-     if(node){
-      node.style.display = "none";
-      node.setAttribute("yt-anti-bullying-toolkit-block", "true");
-      e.style.display = "none";
-      e.setAttribute("yt-anti-bullying-toolkit-block", "true");
+   let e = elements[i];
+   if(hp.isNotHidden(e)){
+    let node = hp.parent(e, "li");
+    if(node){
+     if(configuration.removeNode){
+      hp.remove(e);
+      hp.remove(node);
+     }else{
+      hp.hide(node);
+      hp.block(node);
+      hp.hide(e);
+      hp.block(e);
+      if(configuration.quarantineNode) hp.quarantine(node);
      }
     }
+   }
   }
 }
 
-var blockByInnerHTML = function(expressions, nExpressions, elements){
+let blockByInnerHTML = function(expressions, nExpressions, elements){
   for(var i = 0, N = elements.length; i < N; ++i){
-    var e = elements[i];
-    var skip = true;
-    for(var j = 0; j < nExpressions; ++j){
-     if(expressions[j].test(e.innerHTML) === true){
-       skip = false;
-       break;
+   let e = elements[i];
+   let skip = true;
+   for(var j = 0; j < nExpressions; ++j){
+    if(expressions[j].test(e.innerHTML) === true){
+      skip = false;
+      break;
+    }
+   }
+   if(skip) continue;
+   if(hp.isNotHidden(e)){
+    let node = hp.parent(e, "a");
+    if(node){
+     if(configuration.removeNode){
+      hp.remove(e);
+      hp.remove(node);
+     }else{
+      hp.hide(node);
+      hp.block(node);
+      hp.hide(e);
+      hp.block(e);
+      if(configuration.quarantineNode) hp.quarantine(node);
      }
     }
-    if(skip) continue;
-    if(e.style.display != "none"){
-       var node = e.parentNode;
-       while(node){
-        if(node.tagName.toLowerCase() === "a") break;
-        node = node.parentNode;
-       }
-       if(node){
-        node.style.display = "none";
-        node.setAttribute("yt-anti-bullying-toolkit-block", "true");
-        e.style.display = "none";
-        e.setAttribute("yt-anti-bullying-toolkit-block", "true");
-       }
-    }
+   }
   }
 }
 
-var queries = {};
+let queries = {};
 
 queries.blockByUserName = {};
 queries.blockByUserName.query = "";
@@ -163,41 +204,47 @@ queries.blockClickBaits.allCapsExpression = /^[\s\WA-Z0-9]*$/;
   queries.blockByPlayListName.query = blockByPlayListName;
 })();
 
-var blockByUserName = function(){
+let clean = function(){
+  while(env.container.firstChild) env.container.removeChild(env.container.firstChild)
+}
+
+let blockByUserName = function(){
   block(document.querySelectorAll(queries.blockByUserName.query));
   blockByInnerHTML(queries.blockVideoWallByUserName.expressions, queries.blockVideoWallByUserName.nExpressions, document.querySelectorAll(queries.blockVideoWallByUserName.query));
 }
 
-var blockByChannelName = function(){
+let blockByChannelName = function(){
   block(document.querySelectorAll(queries.blockByChannelName.query));
 }
 
-var blockByPlayListName = function(){
+let blockByPlayListName = function(){
   block(document.querySelectorAll(queries.blockByPlayListName.query));
 }
 
-var blockComments = function(){
+let blockComments = function(){
   var comments = document.getElementById("watch-discussion");
   if(comments){
-    comments.style.display = 'none';
-    comments.setAttribute("yt-anti-bullying-toolkit-block", "true");
+    hp.hide(comments);
+    comments.setAttribute("yt-anti-bullying-toolkit-no-comment", "true");
   }
 }
 
-var blockClickBaitWithAllCaps = function(e){
+let blockClickBaitWithAllCaps = function(e){
   let exp = queries.blockClickBaits.allCapsExpression;
   if(exp.test(e.innerHTML) === true){
-   if(e.style.display != "none"){
-    var node = e.parentNode;
-    while(node){
-     if(node.tagName.toLowerCase() === "li") break;
-     node = node.parentNode;
-    }
+   if(hp.isNotHidden(e)){
+    let node = hp.parent(e, "li");
     if(node){
-     node.style.display = "none";
-     node.setAttribute("yt-anti-bullying-toolkit-clickbait", "true");
-     e.style.display = "none";
-     e.setAttribute("yt-anti-bullying-toolkit-clickbait", "true");
+     if(configuration.removeNode){
+      hp.remove(e);
+      hp.remove(node);
+     }else{
+      hp.hide(node);
+      hp.clickbait(node);
+      hp.hide(e);
+      hp.clickbait(e);
+      if(configuration.quarantineNode) hp.quarantine(node);
+     }
      return true;
     }
    }else{
@@ -207,23 +254,23 @@ var blockClickBaitWithAllCaps = function(e){
   return false;
 }
 
-var blockClickBaits = function(){
-  var elements = document.querySelectorAll(queries.blockClickBaits.query);
+let blockClickBaits = function(){
+  let elements = document.querySelectorAll(queries.blockClickBaits.query);
   for(var i = 0, N = elements.length; i < N; ++i){
    let e = elements[i];
    if(blockClickBaitWithAllCaps(e)) continue;
   }
 }
 
-var disableAutoplay = function(){
-  var autoplay = document.getElementById("autoplay-checkbox");
+let disableAutoplay = function(){
+  let autoplay = document.getElementById("autoplay-checkbox");
   if(autoplay && autoplay.checked === true){
     autoplay.click();
-    autoplay.setAttribute("yt-anti-bullying-toolkit-block", "true");
+    autoplay.setAttribute("yt-anti-bullying-toolkit-no-autoplay", "true");
   }
 }
 
-var reinforceLocalization = function(){
+let reinforceLocalization = function(){
   let elements = document.querySelectorAll("a:not([yt-anti-bullying-toolkit-localize])");
   for(var i = 0, N = elements.length; i < N; ++i){
    let e = elements[i];
@@ -235,7 +282,9 @@ var reinforceLocalization = function(){
   }
 }
 
-var execute = function(){
+let execute = function(){
+  const location = window.location.toString();
+  if(env.location !== location) clean();
   if(!configuration.displayUsers) blockByUserName();
   if(!configuration.displayChannels) blockByChannelName();
   if(!configuration.displayPlayLists) blockByPlayListName();
@@ -243,12 +292,21 @@ var execute = function(){
   if(!configuration.displayClickBaits) blockClickBaits();
   if(!configuration.autoplay) disableAutoplay();
   if(configuration.localize) reinforceLocalization();
+  env.location = location;
 }
 
-var observer = null;
+if(document){
+  const body = document.body || null;
+  const first = (body) ? body.firstChild || null : null;
+  env.container = document.createElement("span");
+  env.container.id = configuration.container;
+  hp.hide(env.container);
+  if(first) body.insertBefore(env.container, first);
+  else body.appendChild(env.container);
+}
 
 if(document){
-  var ctor = (MutationObserver||WebKitMutationObserver);
-  observer = new ctor(function(mutations){ execute(); });
-  observer.observe(document.body, { childList: true, subtree: true });
+  let ctor = (MutationObserver||WebKitMutationObserver);
+  env.observer = new ctor(function(mutations){ execute(); });
+  env.observer.observe(document.body, { childList: true, subtree: true });
 }
