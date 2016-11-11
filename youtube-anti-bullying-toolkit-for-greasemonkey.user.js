@@ -36,11 +36,17 @@ configuration.playLists = [
   "playList1",
   "playList2"
 ];
-configuration.displayUsers = false;
-configuration.displayChannels = false;
-configuration.displayPlayLists = false;
-configuration.displayComments = false;
-configuration.displayClickBaits = false;
+configuration.filters = [
+  "(regex0|regex1)",
+  "(regex2|regex3)",
+  "(regex4|regex5)"
+];
+configuration.filterUsers = true;
+configuration.filterChannels = true;
+configuration.filterPlayLists = true;
+configuration.filterContent = true;
+configuration.filterClickBaits = true;
+configuration.comments = false;
 configuration.autoplay = false;
 configuration.localize = true;
 configuration.removeNode = false;
@@ -49,6 +55,13 @@ configuration.container = "yt-anti-bullying-toolkit-quarantine-container";
 
 let hp = {};
 
+hp.flatline = function(e, f){
+  const parent = e.parentNode
+  const next = e.nextSibling
+  parent.removeChild(e);
+  f(e);
+  parent.insertBefore(e, next);
+}
 hp.parent = function(e, tagName){
   let out = e.parentNode;
   while(out){
@@ -56,6 +69,13 @@ hp.parent = function(e, tagName){
    out = out.parentNode;
   }
   return out;
+}
+hp.empty = function(e){
+  let node = e.firstChild;
+  while(node){
+    e.removeChild(node)
+    node = e.firstChild
+  }
 }
 hp.isNotHidden = function(e){
   return e.style.display !== "none"
@@ -80,6 +100,7 @@ hp.quarantine = function(e){
 const nUsers = configuration.users.length;
 const nChannels = configuration.channels.length;
 const nPlayLists = configuration.playLists.length;
+const nFilters = configuration.filters.length;
 
 (function(){
   if(!configuration.localize) return;
@@ -122,7 +143,7 @@ let block = function(elements){
   }
 }
 
-let blockByInnerHTML = function(expressions, nExpressions, elements){
+let blockByInnerHTML = function(expressions, nExpressions, elements, tagName){
   for(var i = 0, N = elements.length; i < N; ++i){
    let e = elements[i];
    let skip = true;
@@ -134,7 +155,7 @@ let blockByInnerHTML = function(expressions, nExpressions, elements){
    }
    if(skip) continue;
    if(hp.isNotHidden(e)){
-    let node = hp.parent(e, "a");
+    let node = hp.parent(e, tagName);
     if(node){
      if(configuration.removeNode){
       hp.remove(e);
@@ -163,6 +184,10 @@ queries.blockByChannelName = {};
 queries.blockByChannelName.query = "";
 queries.blockByPlayListName = {};
 queries.blockByPlayListName.query = "";
+queries.blockByFilter = {};
+queries.blockByFilter.query = "li a:not([yt-anti-bullying-toolkit-block])";
+queries.blockByFilter.expressions = configuration.filters.map(function(v){ return new RegExp(v, "i"); });
+queries.blockByFilter.nExpressions = queries.blockByFilter.expressions.length;
 queries.blockClickBaits = {};
 queries.blockClickBaits.query = "li a span[class='title']:not([yt-anti-bullying-toolkit-clickbait]), h3[class*='yt-lockup-title'] a:not([yt-anti-bullying-toolkit-clickbait])";
 queries.blockClickBaits.allCapsExpression = /^[\s\WA-Z0-9]*$/;
@@ -205,12 +230,12 @@ queries.blockClickBaits.allCapsExpression = /^[\s\WA-Z0-9]*$/;
 })();
 
 let clean = function(){
-  while(env.container.firstChild) env.container.removeChild(env.container.firstChild)
+  hp.flatline(env.container, hp.empty);
 }
 
 let blockByUserName = function(){
   block(document.querySelectorAll(queries.blockByUserName.query));
-  blockByInnerHTML(queries.blockVideoWallByUserName.expressions, queries.blockVideoWallByUserName.nExpressions, document.querySelectorAll(queries.blockVideoWallByUserName.query));
+  blockByInnerHTML(queries.blockVideoWallByUserName.expressions, queries.blockVideoWallByUserName.nExpressions, document.querySelectorAll(queries.blockVideoWallByUserName.query), "a");
 }
 
 let blockByChannelName = function(){
@@ -219,6 +244,10 @@ let blockByChannelName = function(){
 
 let blockByPlayListName = function(){
   block(document.querySelectorAll(queries.blockByPlayListName.query));
+}
+
+let blockByContentFilters = function(){
+  blockByInnerHTML(queries.blockByFilter.expressions, queries.blockByFilter.nExpressions, document.querySelectorAll(queries.blockByFilter.query), "li");
 }
 
 let blockComments = function(){
@@ -285,11 +314,12 @@ let reinforceLocalization = function(){
 let execute = function(){
   const location = window.location.toString();
   if(env.location !== location) clean();
-  if(!configuration.displayUsers) blockByUserName();
-  if(!configuration.displayChannels) blockByChannelName();
-  if(!configuration.displayPlayLists) blockByPlayListName();
-  if(!configuration.displayComments) blockComments();
-  if(!configuration.displayClickBaits) blockClickBaits();
+  if(configuration.filterUsers) blockByUserName();
+  if(configuration.filterChannels) blockByChannelName();
+  if(configuration.filterPlayLists) blockByPlayListName();
+  if(configuration.filterContent) blockByContentFilters();
+  if(configuration.filterClickBaits) blockClickBaits();
+  if(!configuration.comments) blockComments();
   if(!configuration.autoplay) disableAutoplay();
   if(configuration.localize) reinforceLocalization();
   env.location = location;
