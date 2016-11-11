@@ -26,15 +26,35 @@ configuration.playLists = [
   "playList0",
   "playList1",
   "playList2"
-]
-configuration.displayUsers = false;
-configuration.displayChannels = false;
-configuration.displayPlayLists = false;
-configuration.displayComments = false;
-configuration.displayClickBaits = false;
+];
+configuration.filters = [
+  "(regex0|regex1)",
+  "(regex2|regex3)",
+  "(regex4|regex5)"
+];
+configuration.filterUsers = true;
+configuration.filterChannels = true;
+configuration.filterPlayLists = true;
+configuration.filterContent = true;
+configuration.filterClickBaits = true;
+configuration.comments = false;
 configuration.autoplay = false;
 configuration.localize = true;
 ```
+
+### about the "content filter" feature
+marks any content that has a match in the defined regex pattern list as blocked
+
+```javascript
+configuration.filters = [
+  "(regex0|regex1)",
+  "(regex2|regex3)",
+  "(regex4|regex5)"
+];
+```
+
+- please visit the following website to learn more about regular expressions
+> https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 
 ### about the "clickbait" feature
 marks any content with all caps title as clickbait
